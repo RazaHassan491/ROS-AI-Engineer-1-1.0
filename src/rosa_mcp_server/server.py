@@ -523,28 +523,21 @@ def ros_snapshot() -> str:
     os.makedirs(os.path.join(PROJECT_ROOT, "camera_images"), exist_ok=True)
     
     try:
-        # DIRECT EXECUTION: Bypass pixi.toml and call python directly with full env
-        cmd = [PIXI_PYTHON, SCRIPT_PATH]
+        # WRAPPER EXECUTION: Use the .ps1 script to ensure a 100% clean shell environment
+        # This is VITAL for ROS 2 Discovery (DDS) on Windows.
+        WRAPPER_PATH = os.path.join(PROJECT_ROOT, "capture_now.ps1")
+        if not os.path.exists(WRAPPER_PATH):
+            return f"{BANNER}Error: Missing wrapper script at {WRAPPER_PATH}"
+            
+        cmd = ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", WRAPPER_PATH]
         
-        env = os.environ.copy()
-        env["AMENT_PREFIX_PATH"] = AMENT_PREFIX
-        env["ROS_VERSION"] = "2"
-        env["ROS_DOMAIN_ID"] = "0"
-        # Combine paths carefully for Windows
-        current_pp = env.get("PYTHONPATH", "")
-        env["PYTHONPATH"] = f"{ROS_SITE_PACKAGES};{PIXI_SITE_PACKAGES};{os.path.join(PROJECT_ROOT, 'src')};{current_pp}"
-        
-        # Add PIXI bin to PATH for DLL resolution (Critical for Windows)
-        env["PATH"] = f"{PIXI_BIN};{env.get('PATH', '')}"
-        
-        log_debug(f"Snapshot Call (Nuclear): {' '.join(cmd)}")
+        log_debug(f"Snapshot Call (Wrapper): {' '.join(cmd)}")
         
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=70, # Increased for extra safety
-            env=env,
+            timeout=130, # Generous timeout for discovery
             cwd=PROJECT_ROOT
         )
 
