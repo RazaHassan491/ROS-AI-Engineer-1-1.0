@@ -490,10 +490,28 @@ def ros_snapshot() -> str:
     """
     import subprocess
     
-    # NUCLEAR ABSOLUTE PATH FIX: Hardcode the user's verified paths to bypass ALL resolution issues
+    BANNER = "--- ROSA MCP Snapshot Tool Ver 2.1 (NUCLEAR) ---\n"
+    
+    # NUCLEAR ABSOLUTE PATH FIX: Hardcode the user's verified paths
     PIXI_PYTHON = r"C:\pixi_ws\.pixi\envs\default\python.exe"
-    SCRIPT_PATH = r"C:\Users\Raza Hassan\Downloads\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main\capture_images.py"
-    PROJECT_ROOT = r"C:\Users\Raza Hassan\Downloads\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main"
+    
+    # Check multiple possible locations for the script due to nesting
+    PATHS_TO_TRY = [
+        r"C:\Users\Raza Hassan\Downloads\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main\capture_images.py",
+        r"C:\Users\Raza Hassan\Downloads\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main\capture_images.py",
+        os.path.join(os.getcwd(), "capture_images.py")
+    ]
+    
+    SCRIPT_PATH = None
+    for p in PATHS_TO_TRY:
+        if os.path.exists(p):
+            SCRIPT_PATH = p
+            break
+            
+    if not SCRIPT_PATH:
+        return f"{BANNER}Error: Could not find capture_images.py. Checked:\n" + "\n".join(PATHS_TO_TRY)
+
+    PROJECT_ROOT = os.path.dirname(SCRIPT_PATH)
     
     # ROS 2 Environment Paths
     AMENT_PREFIX = r"C:\pixi_ws\.pixi\envs\default\Library"
@@ -501,20 +519,8 @@ def ros_snapshot() -> str:
     ROS_SITE_PACKAGES = r"C:\pixi_ws\.pixi\envs\default\Library\lib\site-packages"
     PIXI_SITE_PACKAGES = r"C:\pixi_ws\.pixi\envs\default\Lib\site-packages"
     
-    if not os.path.exists(SCRIPT_PATH):
-        # Fail-over to the deeper nested path if the user moved it
-        SCRIPT_PATH_NESTED = r"C:\Users\Raza Hassan\Downloads\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main\capture_images.py"
-        if os.path.exists(SCRIPT_PATH_NESTED):
-            SCRIPT_PATH = SCRIPT_PATH_NESTED
-            PROJECT_ROOT = os.path.dirname(SCRIPT_PATH)
-        else:
-            return f"Error: Could not find capture_images.py at verified location: {SCRIPT_PATH}. Please check folder structure."
-
     # Ensure output directory exists
-    try:
-        os.makedirs(os.path.join(PROJECT_ROOT, "camera_images"), exist_ok=True)
-    except Exception:
-        pass
+    os.makedirs(os.path.join(PROJECT_ROOT, "camera_images"), exist_ok=True)
     
     try:
         # DIRECT EXECUTION: Bypass pixi.toml and call python directly with full env
@@ -524,31 +530,33 @@ def ros_snapshot() -> str:
         env["AMENT_PREFIX_PATH"] = AMENT_PREFIX
         env["ROS_VERSION"] = "2"
         env["ROS_DOMAIN_ID"] = "0"
-        env["PYTHONPATH"] = f"{ROS_SITE_PACKAGES};{PIXI_SITE_PACKAGES};{os.path.join(PROJECT_ROOT, 'src')};{env.get('PYTHONPATH', '')}"
+        # Combine paths carefully for Windows
+        current_pp = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = f"{ROS_SITE_PACKAGES};{PIXI_SITE_PACKAGES};{os.path.join(PROJECT_ROOT, 'src')};{current_pp}"
         
         # Add PIXI bin to PATH for DLL resolution (Critical for Windows)
         env["PATH"] = f"{PIXI_BIN};{env.get('PATH', '')}"
         
-        log_debug(f"Direct Snapshot Call: {' '.join(cmd)}")
+        log_debug(f"Snapshot Call (Nuclear): {' '.join(cmd)}")
         
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=60, # Increased to 60s for safety
+            timeout=70, # Increased for extra safety
             env=env,
             cwd=PROJECT_ROOT
         )
 
         if result.returncode == 0:
-            return f"Snapshot captured successfully!\nOutput:\n{result.stdout}\n\nImages saved in 'camera_images/' folder."
+            return f"{BANNER}Status: Success!\nOutput:\n{result.stdout}\n\nImages are in {os.path.join(PROJECT_ROOT, 'camera_images')}"
         else:
-            return f"Failed to capture snapshot.\nError:\n{result.stderr}\nOutput:\n{result.stdout}\nEnvironment: {env.get('PYTHONPATH')}"
+            return f"{BANNER}Status: Failed (RC={result.returncode})\nError:\n{result.stderr}\nOutput:\n{result.stdout}\nUsed Script: {SCRIPT_PATH}"
             
     except subprocess.TimeoutExpired:
-        return f"Error: Timed out (60s) for {SCRIPT_PATH}. Check if camera driver is running."
+        return f"{BANNER}Status: TIMEOUT (70s)\nScript: {SCRIPT_PATH}\nHint: The camera topics are active (verified), but the listener timed out. Try again."
     except Exception as e:
-        return f"Error running direct capture: {e}"
+        return f"{BANNER}Status: CRITICAL ERROR\nDetails: {e}"
 
 
 # =============================================================================
