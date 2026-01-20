@@ -490,89 +490,65 @@ def ros_snapshot() -> str:
     """
     import subprocess
     
-    # DYNAMIC SEARCH: Find script and pixi.toml by walking up from THIS file
-    # This file is in src/rosa_mcp_server/server.py
-    current_file_dir = os.path.dirname(os.path.abspath(__file__))
+    # NUCLEAR ABSOLUTE PATH FIX: Hardcode the user's verified paths to bypass ALL resolution issues
+    PIXI_PYTHON = r"C:\pixi_ws\.pixi\envs\default\python.exe"
+    SCRIPT_PATH = r"C:\Users\Raza Hassan\Downloads\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main\capture_images.py"
+    PROJECT_ROOT = r"C:\Users\Raza Hassan\Downloads\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main"
     
-    script_name = "capture_images.py"
-    pixi_toml_name = "pixi.toml"
-    pixi_exe = r"C:\Users\Raza Hassan\.pixi\bin\pixi.exe"
+    # ROS 2 Environment Paths
+    AMENT_PREFIX = r"C:\pixi_ws\.pixi\envs\default\Library"
+    PIXI_BIN = r"C:\pixi_ws\.pixi\envs\default\Library\bin"
+    ROS_SITE_PACKAGES = r"C:\pixi_ws\.pixi\envs\default\Library\lib\site-packages"
+    PIXI_SITE_PACKAGES = r"C:\pixi_ws\.pixi\envs\default\Lib\site-packages"
     
-    script_path = None
-    pixi_toml_path = None
-    project_root = None
-    
-    # Walk up to 4 levels to find the project root
-    check_dir = current_file_dir
-    for _ in range(5):
-        potential_script = os.path.join(check_dir, script_name)
-        potential_pixi = os.path.join(check_dir, pixi_toml_name)
-        
-        if os.path.exists(potential_script) and script_path is None:
-            script_path = potential_script
-            project_root = check_dir
-            
-        if os.path.exists(potential_pixi) and pixi_toml_path is None:
-            pixi_toml_path = potential_pixi
-            
-        if script_path and pixi_toml_path:
-            break
-            
-        parent = os.path.dirname(check_dir)
-        if parent == check_dir: break # Root reached
-        check_dir = parent
+    if not os.path.exists(SCRIPT_PATH):
+        # Fail-over to the deeper nested path if the user moved it
+        SCRIPT_PATH_NESTED = r"C:\Users\Raza Hassan\Downloads\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main\capture_images.py"
+        if os.path.exists(SCRIPT_PATH_NESTED):
+            SCRIPT_PATH = SCRIPT_PATH_NESTED
+            PROJECT_ROOT = os.path.dirname(SCRIPT_PATH)
+        else:
+            return f"Error: Could not find capture_images.py at verified location: {SCRIPT_PATH}. Please check folder structure."
 
-    # Fallbacks if dynamic search fails (using last known good paths)
-    if not script_path:
-        # User confirmed location
-        script_path = r"C:\Users\Raza Hassan\Downloads\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main\capture_images.py"
-        project_root = os.path.dirname(script_path)
-    if not pixi_toml_path:
-        pixi_toml_path = r"C:\pixi_ws\pixi.toml"
-
-    if not os.path.exists(script_path):
-        return f"Error: Could not find {script_name}. Searched up to 4 levels from {current_file_dir}. Last path tried: {script_path}"
-
-    # Ensure output directory exists (script expects 'camera_images')
+    # Ensure output directory exists
     try:
-        os.makedirs(os.path.join(project_root, "camera_images"), exist_ok=True)
+        os.makedirs(os.path.join(PROJECT_ROOT, "camera_images"), exist_ok=True)
     except Exception:
         pass
     
     try:
-        # ENVIRONMENT IS KEY: Use pixi run to replicate the successful manual capture environment
-        cmd = [
-            pixi_exe, 
-            "run", 
-            "--manifest-path", pixi_toml_path, 
-            "python", script_path
-        ]
+        # DIRECT EXECUTION: Bypass pixi.toml and call python directly with full env
+        cmd = [PIXI_PYTHON, SCRIPT_PATH]
         
         env = os.environ.copy()
-        env["AMENT_PREFIX_PATH"] = os.path.join(PIXI_ENV, "Library")
+        env["AMENT_PREFIX_PATH"] = AMENT_PREFIX
         env["ROS_VERSION"] = "2"
         env["ROS_DOMAIN_ID"] = "0"
+        env["PYTHONPATH"] = f"{ROS_SITE_PACKAGES};{PIXI_SITE_PACKAGES};{os.path.join(PROJECT_ROOT, 'src')};{env.get('PYTHONPATH', '')}"
         
-        log_debug(f"Running snapshot cmd: {' '.join(cmd)}")
+        # Add PIXI bin to PATH for DLL resolution (Critical for Windows)
+        env["PATH"] = f"{PIXI_BIN};{env.get('PATH', '')}"
+        
+        log_debug(f"Direct Snapshot Call: {' '.join(cmd)}")
         
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=45,
+            timeout=60, # Increased to 60s for safety
             env=env,
-            cwd=project_root
+            cwd=PROJECT_ROOT
         )
 
         if result.returncode == 0:
             return f"Snapshot captured successfully!\nOutput:\n{result.stdout}\n\nImages saved in 'camera_images/' folder."
         else:
-            return f"Failed to capture snapshot.\nError:\n{result.stderr}\nOutput:\n{result.stdout}\nCommand run: {' '.join(cmd)}\nIn directory: {project_root}"
+            return f"Failed to capture snapshot.\nError:\n{result.stderr}\nOutput:\n{result.stdout}\nEnvironment: {env.get('PYTHONPATH')}"
             
     except subprocess.TimeoutExpired:
-        return f"Error: Timed out (45s) waiting for {script_name}. Check if camera topics are active."
+        return f"Error: Timed out (60s) for {SCRIPT_PATH}. Check if camera driver is running."
     except Exception as e:
-        return f"Error running capture script via pixi: {e}"
+        return f"Error running direct capture: {e}"
 
 
 # =============================================================================
