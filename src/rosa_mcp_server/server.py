@@ -490,7 +490,7 @@ def ros_snapshot() -> str:
     """
     import subprocess
     
-    BANNER = "--- ROSA MCP Snapshot Tool Ver 2.1 (NUCLEAR) ---\n"
+    BANNER = "--- ROSA MCP Snapshot Tool Ver 3.0 (TOTAL RESET) ---\n"
     
     # NUCLEAR ABSOLUTE PATH FIX: Hardcode the user's verified paths
     PIXI_PYTHON = r"C:\pixi_ws\.pixi\envs\default\python.exe"
