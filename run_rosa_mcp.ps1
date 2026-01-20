@@ -13,9 +13,10 @@ $SRC_DIR = Join-Path $PSScriptRoot "src"
 
 # Set Environment Variables
 $env:ROS_VERSION = "2"
-$env:PYTHONPATH = "$SRC_DIR;$env:PYTHONPATH"
-$env:AMENT_PREFIX_PATH = "$PIXI_ENV"
+$env:ROS_DISTRO = "humble"
 $env:ROS_DOMAIN_ID = "0"
+$env:AMENT_PREFIX_PATH = "$PIXI_ENV\Library"
+$env:PYTHONPATH = "$PIXI_ENV\Library\lib\site-packages;$PIXI_ENV\Lib\site-packages;$SRC_DIR"
 
 # Ensure PIXI env is in PATH for DLLs and ROS tools
 $env:PATH = "$PIXI_ENV\Library\bin;$PIXI_ENV\Scripts;$PIXI_ENV;$env:PATH"

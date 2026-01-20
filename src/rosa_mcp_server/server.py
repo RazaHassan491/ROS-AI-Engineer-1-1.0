@@ -16,18 +16,27 @@ from mcp.server.fastmcp import FastMCP
 
 # NUCLEAR WINDOWS FIX: Hardcode environment before ANYTHING else loads
 PIXI_ENV = r"C:\pixi_ws\.pixi\envs\default"
-os.environ["AMENT_PREFIX_PATH"] = PIXI_ENV
+os.environ["AMENT_PREFIX_PATH"] = os.path.join(PIXI_ENV, "Library")
 os.environ["ROS_VERSION"] = "2"
 os.environ["ROS_DOMAIN_ID"] = "0"
+os.environ["ROS_DISTRO"] = "humble"
+
 # Force PIXI bin to the front of PATH for DLL resolution
 pixi_bin = os.path.join(PIXI_ENV, "Library", "bin")
 if pixi_bin not in os.environ.get("PATH", ""):
     os.environ["PATH"] = f"{pixi_bin};{os.environ.get('PATH', '')}"
 
+# Ensure PYTHONPATH includes ROS 2 packages
+ros_python_path = os.path.join(PIXI_ENV, "Library", "lib", "site-packages")
+ros_python_path_2 = os.path.join(PIXI_ENV, "Lib", "site-packages")
+if ros_python_path not in os.environ.get("PYTHONPATH", ""):
+    os.environ["PYTHONPATH"] = f"{ros_python_path};{ros_python_path_2};{os.environ.get('PYTHONPATH', '')}"
+
 # Verify PYTHONPATH includes src
 src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if src_dir not in sys.path:
     sys.path.insert(0, src_dir)
+os.environ["PYTHONPATH"] = f"{src_dir};{os.environ.get('PYTHONPATH', '')}"
 
 
 # Configure logging to stderr and a local file for deep debugging on Windows
