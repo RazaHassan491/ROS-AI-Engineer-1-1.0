@@ -17,9 +17,13 @@ $env:PYTHONPATH = "$SRC_DIR;$env:PYTHONPATH"
 $env:AMENT_PREFIX_PATH = "$PIXI_ENV"
 $env:ROS_DOMAIN_ID = "0"
 
-
-# Ensure PIXI env is in PATH for DLLs
+# Ensure PIXI env is in PATH for DLLs and ROS tools
 $env:PATH = "$PIXI_ENV\Library\bin;$PIXI_ENV\Scripts;$PIXI_ENV;$env:PATH"
 
+# Pre-start ROS 2 Daemon to reduce 'Analyzing' delay
+Write-Host "Pre-warming ROS 2 environment..."
+Start-Process -FilePath "$PIXI_ENV\Library\bin\ros2.exe" -ArgumentList "daemon start" -NoNewWindow -ErrorAction SilentlyContinue
+
 # Run the server
+Write-Host "Starting ROSA MCP Server..."
 & "$PYTHON_EXE" -m rosa_mcp_server

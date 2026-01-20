@@ -1,0 +1,8 @@
+[WARN] [1768894933.514876300] [camera_publisher]: RealSense SDK failed (No device connected). Trying fallback indices...
+[ WARN:0@15.620] global cap.cpp:480 cv::VideoCapture::open VIDEOIO(DSHOW): backend is generally available but can't be used to capture by index
+[ WARN:0@15.621] global cap.cpp:480 cv::VideoCapture::open VIDEOIO(DSHOW): backend is generally available but can't be used to capture by index
+[ WARN:0@15.622] global cap.cpp:480 cv::VideoCapture::open VIDEOIO(DSHOW): backend is generally available but can't be used to capture by index
+[ WARN:0@15.622] global cap.cpp:480 cv::VideoCapture::open VIDEOIO(DSHOW): backend is generally available but can't be used to capture by index
+[ WARN:0@15.623] global cap.cpp:480 cv::VideoCapture::open VIDEOIO(DSHOW): backend is generally available but can't be used to capture by index
+[ERROR] [1768894933.829837500] [camera_publisher]: No camera found (neither RealSense nor Webcam indices 0-4)!
+[INFO] [1768894933.830489100] [camera_publisher]: Using DUMMY black images (camera simulation active)

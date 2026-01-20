@@ -1,3 +1,16 @@
+import os
+import sys
+
+# NUCLEAR WINDOWS FIX: Hardcode environment before ANYTHING else loads
+PIXI_ENV = r"C:\pixi_ws\.pixi\envs\default"
+os.environ["AMENT_PREFIX_PATH"] = PIXI_ENV
+os.environ["ROS_VERSION"] = "2"
+os.environ["ROS_DOMAIN_ID"] = "0"
+# Force PIXI bin to the front of PATH for DLL resolution
+pixi_bin = os.path.join(PIXI_ENV, "Library", "bin")
+if pixi_bin not in os.environ.get("PATH", ""):
+    os.environ["PATH"] = f"{pixi_bin};{os.environ.get('PATH', '')}"
+
 import pyrealsense2 as rs
 import numpy as np
 import cv2
@@ -5,6 +18,8 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
+
+print("--- Camera Publisher Script Started ---")
 
 class UniversalCameraPublisher(Node):
     def __init__(self):
