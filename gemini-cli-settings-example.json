@@ -1,0 +1,18 @@
+{
+    "security": {
+        "auth": {
+            "selectedType": "oauth-personal"
+        }
+    },
+    "mcpServers": {
+        "rosa": {
+            "command": "py",
+            "args": [
+                "-m",
+                "rosa_mcp_server"
+            ],
+            "cwd": "c:/Users/alira/Documents/ROS AI Engineer 1.0/rosa-mcp-server",
+            "timeout": 30000
+        }
+    }
+}

@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rosa-mcp-server"
+version = "0.1.0"
+description = "MCP Server bridge for ROSA (Robot Operating System Agent) - Enables Gemini CLI to interact with ROS systems"
+readme = "README.md"
+authors = [{ name = "ROS AI Engineer" }]
+license = { text = "Apache-2.0" }
+requires-python = ">=3.9"
+dependencies = [
+    "mcp>=1.0.0",
+]
+
+[project.optional-dependencies]
+ros1 = [
+    "jpl-rosa",
+]
+ros2 = [
+    "jpl-rosa",
+]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+]
+
+[project.scripts]
+rosa-mcp-server = "rosa_mcp_server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
