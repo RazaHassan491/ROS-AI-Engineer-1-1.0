@@ -490,17 +490,49 @@ def ros_snapshot() -> str:
     """
     import subprocess
     
-    # Locate capture_images.py script
+    # DYNAMIC SEARCH: Find script and pixi.toml by walking up from THIS file
+    # This file is in src/rosa_mcp_server/server.py
+    current_file_dir = os.path.dirname(os.path.abspath(__file__))
+    
     script_name = "capture_images.py"
-    # The project root is where capture_images.py lives
-    project_root = r"c:\Users\Raza Hassan\Downloads\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main"
-    script_path = os.path.join(project_root, script_name)
-    pixi_toml = r"C:\pixi_ws\pixi.toml"
+    pixi_toml_name = "pixi.toml"
     pixi_exe = r"C:\Users\Raza Hassan\.pixi\bin\pixi.exe"
     
-    if not os.path.exists(script_path):
-        return f"Error: Could not find {script_name} at {script_path}"
+    script_path = None
+    pixi_toml_path = None
+    project_root = None
+    
+    # Walk up to 4 levels to find the project root
+    check_dir = current_file_dir
+    for _ in range(5):
+        potential_script = os.path.join(check_dir, script_name)
+        potential_pixi = os.path.join(check_dir, pixi_toml_name)
         
+        if os.path.exists(potential_script) and script_path is None:
+            script_path = potential_script
+            project_root = check_dir
+            
+        if os.path.exists(potential_pixi) and pixi_toml_path is None:
+            pixi_toml_path = potential_pixi
+            
+        if script_path and pixi_toml_path:
+            break
+            
+        parent = os.path.dirname(check_dir)
+        if parent == check_dir: break # Root reached
+        check_dir = parent
+
+    # Fallbacks if dynamic search fails (using last known good paths)
+    if not script_path:
+        # User confirmed location
+        script_path = r"C:\Users\Raza Hassan\Downloads\ROS-AI-Engineer-1.0-main\ROS-AI-Engineer-1.0-main\capture_images.py"
+        project_root = os.path.dirname(script_path)
+    if not pixi_toml_path:
+        pixi_toml_path = r"C:\pixi_ws\pixi.toml"
+
+    if not os.path.exists(script_path):
+        return f"Error: Could not find {script_name}. Searched up to 4 levels from {current_file_dir}. Last path tried: {script_path}"
+
     # Ensure output directory exists (script expects 'camera_images')
     try:
         os.makedirs(os.path.join(project_root, "camera_images"), exist_ok=True)
@@ -509,24 +541,25 @@ def ros_snapshot() -> str:
     
     try:
         # ENVIRONMENT IS KEY: Use pixi run to replicate the successful manual capture environment
-        # We use '&' for PowerShell compatibility if we were in shell, but here we call it directly via Popen/run
         cmd = [
             pixi_exe, 
             "run", 
-            "--manifest-path", pixi_toml, 
+            "--manifest-path", pixi_toml_path, 
             "python", script_path
         ]
         
         env = os.environ.copy()
-        env["AMENT_PREFIX_PATH"] = PIXI_ENV
+        env["AMENT_PREFIX_PATH"] = os.path.join(PIXI_ENV, "Library")
         env["ROS_VERSION"] = "2"
         env["ROS_DOMAIN_ID"] = "0"
+        
+        log_debug(f"Running snapshot cmd: {' '.join(cmd)}")
         
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=40,
+            timeout=45,
             env=env,
             cwd=project_root
         )
@@ -534,10 +567,10 @@ def ros_snapshot() -> str:
         if result.returncode == 0:
             return f"Snapshot captured successfully!\nOutput:\n{result.stdout}\n\nImages saved in 'camera_images/' folder."
         else:
-            return f"Failed to capture snapshot.\nError:\n{result.stderr}\nOutput:\n{result.stdout}\nCommand run: {' '.join(cmd)}"
+            return f"Failed to capture snapshot.\nError:\n{result.stderr}\nOutput:\n{result.stdout}\nCommand run: {' '.join(cmd)}\nIn directory: {project_root}"
             
     except subprocess.TimeoutExpired:
-        return "Error: Timed out waiting for image capture (40s). Check if camera is connected and publishing topics (/camera/color/image_raw)."
+        return f"Error: Timed out (45s) waiting for {script_name}. Check if camera topics are active."
     except Exception as e:
         return f"Error running capture script via pixi: {e}"
 
